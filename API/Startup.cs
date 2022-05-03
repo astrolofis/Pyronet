@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using API.Helper;
+using Core.interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -14,12 +16,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 using pyronet.Core.interfaces;
 using pyronet.Repo.Data;
+using Repo.Data;
 
 namespace API
 {
     public class Startup
     {
-       private readonly IConfiguration _config;
+        private readonly IConfiguration _config;
         public Startup(IConfiguration config)
         {
             _config = config;
@@ -28,9 +31,11 @@ namespace API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<IProductrepository,ProductRepository>();
+            services.AddScoped<IProductrepository, ProductRepository>();
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddAutoMapper(typeof(MappingProfile));
             services.AddControllers();
-            services.AddDbContext<StoreContext>(x=>x.UseSqlite(_config.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<StoreContext>(x => x.UseSqlite(_config.GetConnectionString("DefaultConnection")));
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
@@ -50,6 +55,8 @@ namespace API
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseStaticFiles();
 
             app.UseAuthorization();
 
