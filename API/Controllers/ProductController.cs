@@ -12,6 +12,9 @@ using Core.Specification;
 using API.Dtos;
 using AutoMapper;
 using API.Controllers;
+using API.Errors;
+using Microsoft.AspNetCore.Http;
+using API.Helper;
 
 namespace pyronet.API.Controllers
 {
@@ -34,17 +37,23 @@ namespace pyronet.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IReadOnlyList<ProductToDto>>> GetProducts()
+        public async Task<ActionResult<Pagination<ProductToDto>>> GetProducts([FromQuery]ProductSpecParams productParams)
         {
-            var spec=new ProductMapSpecification();
+            var spec=new ProductMapSpecification(productParams);
+            var countSpec=new ProductCountSpecificationFilters(productParams);
+            var totalItems=await _productRepo.CountAsync(countSpec);            
             var products=await _productRepo.ListAsync(spec);
-            return Ok(_mapper.Map<IReadOnlyList<Product>,IReadOnlyList<ProductToDto>>(products));      
+            var data=_mapper.Map<IReadOnlyList<Product>,IReadOnlyList<ProductToDto>>(products);
+            return Ok(new Pagination<ProductToDto>(productParams.PageIndex,productParams.PageSize,totalItems,data));      
         }
         [HttpGet("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse),StatusCodes.Status404NotFound)]
         public async Task<ActionResult<ProductToDto>> GetProduct(int id)
         {
             var spec=new ProductMapSpecification(id);
             var product= await _productRepo.GetEntityWithSpec(spec);
+            if(product==null)return NotFound(new ApiResponse(404));
             return _mapper.Map<Product,ProductToDto>(product);
        }
        [HttpGet("brands")]
